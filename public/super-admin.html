@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Super Admin Login</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="super-admin">
+    <div class="ambient-bg" id="ambientBg">
+      <div class="grain"></div>
+      <div class="light-sweep"></div>
+      <div class="glow-orb brass"></div>
+      <div class="glow-orb forest"></div>
+      <div class="glow-orb burgundy"></div>
+      <span class="mote" style="--x:8%; --y:20%; --size:4px; --duration:13s; --delay:0s;"></span>
+      <span class="mote" style="--x:22%; --y:65%; --size:6px; --duration:16s; --delay:2s;"></span>
+      <span class="mote" style="--x:40%; --y:35%; --size:3px; --duration:11s; --delay:4s;"></span>
+      <span class="mote" style="--x:58%; --y:75%; --size:5px; --duration:15s; --delay:1s;"></span>
+      <span class="mote" style="--x:74%; --y:15%; --size:4px; --duration:14s; --delay:3s;"></span>
+      <span class="mote" style="--x:88%; --y:55%; --size:6px; --duration:18s; --delay:5s;"></span>
+    </div>
+
+    <div class="page-shell">
+      <header class="hero reveal" style="animation-delay: 0ms;">
+        <div class="brand">
+          <div class="brand-mark stamp-in" id="brandMark">LSM</div>
+          <div>
+            <p class="eyebrow">System Administration</p>
+            <h1 id="libraryName">Library Seat Management</h1>
+            <span class="title-rule"></span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="ghost-link button-link" id="themeToggle" type="button">🌙 Dark</button>
+          <a class="ghost-link" href="/">Back</a>
+        </div>
+      </header>
+
+      <section id="superAdminLoginCard" class="panel auth-panel auth-panel-centered reveal" style="animation-delay: 90ms;">
+        <div class="login-icon">🛡️</div>
+        <h2>Super Admin Login</h2>
+        <p class="helper-copy">Manage librarian accounts, library settings, and the reset key.</p>
+        <form id="superAdminLoginForm" class="stack-form">
+          <input name="username" type="text" placeholder="Username" required />
+          <div class="password-field">
+            <input name="password" type="password" placeholder="Password" required />
+            <button type="button" class="password-toggle" data-toggle-password>👁</button>
+          </div>
+          <button type="submit" class="primary-btn">Login</button>
+        </form>
+      </section>
+
+      <div id="superAdminDashboard" class="dashboard hidden">
+        <section class="summary-card reveal" style="animation-delay: 0ms;">
+          <div class="summary-meta">
+            <div class="summary-pill" id="superAdminOccupiedCount">Occupied: 0</div>
+            <div class="summary-pill" id="superAdminVacantCount">Vacant: 0</div>
+            <div class="summary-pill" id="adminCount">Admins: 0</div>
+          </div>
+          <div class="summary-meta">
+            <button class="ghost-link button-link" id="logoutSuperAdmin">Logout</button>
+          </div>
+        </section>
+
+        <section class="dashboard-grid reveal" style="animation-delay: 70ms;">
+          <div class="panel">
+            <h3>Library Settings</h3>
+            <form id="librarySettingsForm" class="stack-form">
+              <input name="name" type="text" placeholder="Library name" />
+              <input name="logoText" type="text" maxlength="3" placeholder="Logo text" />
+              <div class="password-field">
+                <input name="resetKey" type="password" placeholder="New librarian reset key" />
+                <button type="button" class="password-toggle" data-toggle-password>👁</button>
+              </div>
+              <button type="submit" class="primary-btn">Save Settings</button>
+            </form>
+          </div>
+
+          <div class="panel">
+            <h3>Create Librarian</h3>
+            <form id="createAdminForm" class="stack-form">
+              <input name="name" type="text" placeholder="Librarian name" required />
+              <input name="username" type="text" placeholder="Librarian username" required />
+              <div class="password-field">
+                <input name="password" type="password" placeholder="Password" required />
+                <button type="button" class="password-toggle" data-toggle-password>👁</button>
+              </div>
+              <button type="submit" class="primary-btn">Create Librarian</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel reveal" style="animation-delay: 140ms;">
+          <h3>Librarian Accounts</h3>
+          <div id="adminList" class="admin-list"></div>
+        </section>
+      </div>
+    </div>
+
+    <div id="globalToast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="/app.js"></script>
+    <script>
+      (function () {
+        // --- Show/hide password toggles (same behavior as the librarian login page) ---
+        document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var input = btn.previousElementSibling;
+            if (!input) return;
+            var isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            btn.textContent = isHidden ? '🙈' : '👁';
+            btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Librarian Login</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="admin">
+    <div class="ambient-bg" id="ambientBg">
+      <div class="grain"></div>
+      <div class="light-sweep"></div>
+      <div class="glow-orb brass"></div>
+      <div class="glow-orb forest"></div>
+      <div class="glow-orb burgundy"></div>
+      <span class="mote" style="--x:8%; --y:20%; --size:4px; --duration:13s; --delay:0s;"></span>
+      <span class="mote" style="--x:22%; --y:65%; --size:6px; --duration:16s; --delay:2s;"></span>
+      <span class="mote" style="--x:40%; --y:35%; --size:3px; --duration:11s; --delay:4s;"></span>
+      <span class="mote" style="--x:58%; --y:75%; --size:5px; --duration:15s; --delay:1s;"></span>
+      <span class="mote" style="--x:74%; --y:15%; --size:4px; --duration:14s; --delay:3s;"></span>
+      <span class="mote" style="--x:88%; --y:55%; --size:6px; --duration:18s; --delay:5s;"></span>
+    </div>
+
+    <div class="page-shell">
+      <header class="hero reveal" style="animation-delay: 0ms;">
+        <div class="brand">
+          <div class="brand-mark stamp-in" id="brandMark">LSM</div>
+          <div>
+            <p class="eyebrow">Librarian Access</p>
+            <h1 id="libraryName">Library Seat Management</h1>
+            <span class="title-rule"></span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="ghost-link button-link" id="themeToggle" type="button">🌙 Dark</button>
+          <a class="ghost-link" href="/">Back</a>
+        </div>
+      </header>
+
+      <section id="adminLoginCard" class="panel auth-panel auth-panel-centered reveal" style="animation-delay: 90ms;">
+        <div class="login-icon">🔐</div>
+        <h2>Librarian Login</h2>
+        <p class="helper-copy">Log in with your librarian username and password.</p>
+        <form id="adminLoginForm" class="stack-form">
+          <input name="username" type="text" placeholder="Username" required />
+          <div class="password-field">
+            <input name="password" type="password" placeholder="Password" required />
+            <button type="button" class="password-toggle" data-toggle-password>👁</button>
+          </div>
+          <button type="submit" class="primary-btn">Login</button>
+        </form>
+      </section>
+
+      <div id="adminDashboard" class="dashboard hidden">
+        <section class="summary-card reveal" style="animation-delay: 0ms;">
+          <div class="summary-meta">
+            <div class="summary-pill compact" id="lastUpdatedTime">Last Updated — --:--</div>
+            <div class="summary-pill" id="adminOccupiedCount">Occupied: 0</div>
+            <div class="summary-pill" id="adminVacantCount">Vacant: 0</div>
+            <div class="summary-pill" id="adminUserName">Welcome</div>
+            <div class="summary-pill" id="adminThemeBadge">Theme: light</div>
+          </div>
+          <div class="summary-meta">
+            <button class="ghost-link button-link" id="refreshAdmin">Refresh</button>
+            <button class="ghost-link button-link" id="openSettingsPanel">Settings</button>
+            <button class="ghost-link button-link" id="logoutAdmin">Logout</button>
+          </div>
+          <div class="occupancy-row">
+            <span class="occupancy-label" id="occupancyLabel">No seat data yet</span>
+            <div class="occupancy-track">
+              <div class="occupancy-fill" id="occupancyFill"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="toolbar reveal" style="animation-delay: 70ms;">
+          <label class="search-box">
+            <span>Search Seat</span>
+            <input id="adminSeatSearch" type="number" placeholder="24" />
+          </label>
+          <div class="hero-actions">
+            <button class="secondary-btn" id="toggleActivityCenter" type="button">Open Activity Center</button>
+            <p class="helper-copy">Click a seat to mark it occupied or vacant.</p>
+            <span class="shortcut-chip">Press <kbd>/</kbd> to search</span>
+          </div>
+        </section>
+
+        <main class="layout-card reveal" style="animation-delay: 140ms;">
+          <div id="adminSeatLayout" class="seat-layout"></div>
+        </main>
+
+        <section id="activityCenterSection" class="panel activity-panel hidden">
+          <div class="panel-head">
+            <h3>Activity Center</h3>
+            <button class="text-btn" id="closeActivityCenter" type="button">Close</button>
+          </div>
+          <div class="activity-grid">
+            <div id="activityLogList" class="activity-log-list"></div>
+            <div id="activityDetail" class="activity-detail">Select an activity item to see the details.</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="seatModal" class="modal hidden">
+      <div class="modal-card">
+        <h3 id="seatModalTitle">Seat</h3>
+        <p id="seatModalStatus">Current Status:</p>
+        <div class="modal-actions">
+          <button id="seatModalToggle" class="primary-btn">Toggle</button>
+          <button id="closeSeatModal" class="secondary-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settingsModal" class="modal hidden">
+      <div class="modal-card settings-card">
+        <div class="settings-head">
+          <h3>Librarian Settings</h3>
+          <button class="text-btn" id="closeSettingsPanel" type="button">Close</button>
+        </div>
+
+        <section class="settings-section">
+          <h4>Change Password</h4>
+          <form id="changePasswordForm" class="stack-form">
+            <div class="password-field">
+              <input name="currentPassword" type="password" placeholder="Current password" required />
+              <button type="button" class="password-toggle" data-toggle-password>👁</button>
+            </div>
+            <div class="password-field">
+              <input name="newPassword" type="password" placeholder="New password" required />
+              <button type="button" class="password-toggle" data-toggle-password>👁</button>
+            </div>
+            <button type="submit" class="primary-btn">Update Password</button>
+          </form>
+        </section>
+
+        <section class="settings-section">
+          <h4>Library Information</h4>
+          <form id="librarySettingsForm" class="stack-form">
+            <input name="libraryName" type="text" placeholder="Library name" required />
+            <input name="logoText" type="text" maxlength="3" placeholder="Logo text" required />
+            <button type="submit" class="primary-btn">Save Library Info</button>
+          </form>
+        </section>
+
+        <section class="settings-section">
+          <h4>Reset All Seats</h4>
+          <p class="helper-copy">Use the librarian reset key to mark every seat as vacant.</p>
+          <form id="resetSeatsForm" class="stack-form">
+            <div class="password-field">
+              <input name="resetKey" type="password" placeholder="Reset key" required />
+              <button type="button" class="password-toggle" data-toggle-password>👁</button>
+            </div>
+            <button type="submit" class="secondary-btn">Make All Seats Vacant</button>
+          </form>
+        </section>
+      </div>
+    </div>
+
+    <div id="globalToast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="/app.js"></script>
+    <script>
+      (function () {
+        // --- Occupancy meter: purely presentational, just watches the existing
+        // count pills so it works no matter how app.js updates them. ---
+        var fill = document.getElementById('occupancyFill');
+        var label = document.getElementById('occupancyLabel');
+        var vacantEl = document.getElementById('adminVacantCount');
+        var occupiedEl = document.getElementById('adminOccupiedCount');
+
+        function parseCount(el) {
+          if (!el) return 0;
+          var m = el.textContent.match(/-?\d+/);
+          return m ? parseInt(m[0], 10) : 0;
+        }
+
+        function updateMeter() {
+          var vacant = parseCount(vacantEl);
+          var occupied = parseCount(occupiedEl);
+          var total = vacant + occupied;
+          var pct = total > 0 ? Math.round((occupied / total) * 100) : 0;
+          if (fill) fill.style.width = pct + '%';
+          if (label) label.textContent = total > 0 ? pct + '% occupied' : 'No seat data yet';
+        }
+
+        if (vacantEl && occupiedEl && window.MutationObserver) {
+          var obs = new MutationObserver(updateMeter);
+          obs.observe(vacantEl, { childList: true, characterData: true, subtree: true });
+          obs.observe(occupiedEl, { childList: true, characterData: true, subtree: true });
+        }
+        updateMeter();
+
+        // --- "/" jumps straight to the seat search box ---
+        document.addEventListener('keydown', function (e) {
+          if (e.key !== '/') return;
+          var active = document.activeElement;
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+          var dashboard = document.getElementById('adminDashboard');
+          var search = document.getElementById('adminSeatSearch');
+          if (search && dashboard && !dashboard.classList.contains('hidden')) {
+            e.preventDefault();
+            search.focus();
+          }
+        });
+
+        // --- Show/hide password toggles ---
+        document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var input = btn.previousElementSibling;
+            if (!input) return;
+            var isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            btn.textContent = isHidden ? '🙈' : '👁';
+            btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

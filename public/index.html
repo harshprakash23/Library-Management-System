@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Library Seat Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="home">
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="glow-orb brass"></div>
+      <div class="glow-orb forest"></div>
+      <div class="glow-orb burgundy"></div>
+      <div class="light-sweep"></div>
+      <span class="mote" style="--x:8%;  --y:70%; --size:4px; --duration:13s; --delay:0s;"></span>
+      <span class="mote" style="--x:22%; --y:40%; --size:3px; --duration:15s; --delay:2s;"></span>
+      <span class="mote" style="--x:38%; --y:80%; --size:5px; --duration:11s; --delay:4s;"></span>
+      <span class="mote" style="--x:55%; --y:30%; --size:3px; --duration:17s; --delay:1s;"></span>
+      <span class="mote" style="--x:68%; --y:65%; --size:4px; --duration:14s; --delay:5s;"></span>
+      <span class="mote" style="--x:80%; --y:45%; --size:3px; --duration:12s; --delay:3s;"></span>
+      <span class="mote" style="--x:90%; --y:75%; --size:5px; --duration:16s; --delay:6s;"></span>
+      <div class="grain"></div>
+    </div>
+
+    <div class="page-shell home-shell">
+      <section class="hero home-hero reveal">
+        <div class="brand">
+          <div class="brand-mark stamp-in" id="brandMark">LSM</div>
+          <div>
+            <p class="eyebrow">Library Access Portal</p>
+            <h1 id="libraryName">Library Seat Management</h1>
+            <span class="title-rule"></span>
+            <p class="hero-copy">Real-time seat status for the reading room.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="choice-grid">
+        <a class="choice-card reveal" style="animation-delay: 120ms;" href="/student">
+          <span class="card-tab">No. 01</span>
+          <span class="choice-kicker">Public catalog</span>
+          <h2>Browse Seats</h2>
+          <p>See live seat status across the reading room.</p>
+          <span class="choice-link">Open seat map</span>
+        </a>
+
+        <a class="choice-card reveal" style="animation-delay: 240ms;" href="/librarian">
+          <span class="card-tab">No. 02</span>
+          <span class="choice-kicker">Staff access</span>
+          <h2>Librarian Login</h2>
+          <p>Sign in to update seats and manage settings.</p>
+          <span class="choice-link">Sign in</span>
+        </a>
+      </section>
+    </div>
+
+    <script>
+      (function () {
+        var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var isFinePointer = window.matchMedia("(pointer: fine)").matches;
+        if (prefersReduced || !isFinePointer) return;
+
+        var ambient = document.querySelector(".ambient-bg");
+        var orbs = document.querySelectorAll(".glow-orb");
+        var raf = null;
+
+        window.addEventListener("mousemove", function (e) {
+          var nx = e.clientX / window.innerWidth - 0.5;
+          var ny = e.clientY / window.innerHeight - 0.5;
+          if (raf) return;
+          raf = requestAnimationFrame(function () {
+            ambient.style.setProperty("--mx", (nx * 40).toFixed(1) + "px");
+            ambient.style.setProperty("--my", (ny * 40).toFixed(1) + "px");
+            orbs.forEach(function (orb, i) {
+              var depth = (i + 1) * 10;
+              orb.style.transform =
+                "translate3d(" + (nx * depth).toFixed(1) + "px, " + (ny * depth).toFixed(1) + "px, 0)";
+            });
+            raf = null;
+          });
+        });
+
+        document.querySelectorAll(".choice-card").forEach(function (card) {
+          card.addEventListener("mousemove", function (e) {
+            var rect = card.getBoundingClientRect();
+            var px = (e.clientX - rect.left) / rect.width - 0.5;
+            var py = (e.clientY - rect.top) / rect.height - 0.5;
+            card.style.transform =
+              "translateY(-5px) rotateX(" + (py * -6).toFixed(2) + "deg) rotateY(" + (px * 8).toFixed(2) + "deg)";
+          });
+          card.addEventListener("mouseleave", function () {
+            card.style.transform = "";
+          });
+        });
+      })();
+    </script>
+    <script src="/app.js"></script>
+  </body>
+</html>

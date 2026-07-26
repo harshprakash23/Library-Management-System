@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Seat View</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="student">
+    <div class="ambient-bg" id="ambientBg">
+      <div class="grain"></div>
+      <div class="light-sweep"></div>
+      <div class="glow-orb brass"></div>
+      <div class="glow-orb forest"></div>
+      <div class="glow-orb burgundy"></div>
+      <span class="mote" style="--x:8%; --y:20%; --size:4px; --duration:13s; --delay:0s;"></span>
+      <span class="mote" style="--x:22%; --y:65%; --size:6px; --duration:16s; --delay:2s;"></span>
+      <span class="mote" style="--x:40%; --y:35%; --size:3px; --duration:11s; --delay:4s;"></span>
+      <span class="mote" style="--x:58%; --y:75%; --size:5px; --duration:15s; --delay:1s;"></span>
+      <span class="mote" style="--x:74%; --y:15%; --size:4px; --duration:14s; --delay:3s;"></span>
+      <span class="mote" style="--x:88%; --y:55%; --size:6px; --duration:18s; --delay:5s;"></span>
+    </div>
+
+    <div class="page-shell">
+      <header class="hero reveal" style="animation-delay: 0ms;">
+        <div class="brand">
+          <div class="brand-mark stamp-in" id="brandMark">LSM</div>
+          <div>
+            <p class="eyebrow">Seat Availability</p>
+            <h1 id="libraryName">Library Seat Management</h1>
+            <span class="title-rule"></span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <div class="header-status">
+            <span class="summary-pill compact" id="lastUpdatedTime">Last Updated — --:--</span>
+            <button class="ghost-link button-link" id="themeToggle" type="button">🌙 Dark</button>
+          </div>
+          <a class="ghost-link" href="/">Back to Home</a>
+        </div>
+      </header>
+
+      <section class="summary-card reveal" style="animation-delay: 90ms;">
+        <div class="legend">
+          <span><i class="legend-dot vacant"></i> Vacant</span>
+          <span><i class="legend-dot occupied"></i> Occupied</span>
+        </div>
+        <div class="summary-meta">
+          <div class="summary-pill" id="vacantCount">Vacant: 0</div>
+          <div class="summary-pill" id="occupiedCount">Occupied: 0</div>
+          <div class="summary-pill" id="refreshBadge">Live · refreshes every 10s</div>
+        </div>
+      </section>
+
+      <section class="toolbar reveal" style="animation-delay: 160ms;">
+        <label class="search-box">
+          <span>Find a seat</span>
+          <input id="seatSearch" type="number" placeholder="e.g. 24" min="1" />
+        </label>
+      </section>
+
+      <main class="layout-card reveal" style="animation-delay: 230ms;">
+        <div id="seatLayout" class="seat-layout"></div>
+      </main>
+
+      <p class="helper-copy top-gap reveal" style="animation-delay: 300ms;">
+        Seat colors update automatically. Enter a seat number above to highlight it on the map.
+      </p>
+    </div>
+
+    <div id="globalToast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
