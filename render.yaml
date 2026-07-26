@@ -2,6 +2,7 @@ services:
   - type: web
     name: library-seat-management
     env: node
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -16,3 +17,4 @@ databases:
   - name: library-db
     databaseName: library_db
     user: library_user
+    plan: free
