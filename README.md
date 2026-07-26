@@ -64,15 +64,6 @@ Open:
 - Librarian page: `http://localhost:3000/librarian`
 - Super admin page: `http://localhost:3000/super-admin`
 
-## Deploying to Render
-
-1. Push this repository to GitHub.
-2. Sign in to [Render](https://render.com).
-3. Click **New +** -> **Blueprint**.
-4. Connect your GitHub repository. Render will automatically detect [`render.yaml`](file:///c:/Users/harsh/Desktop/LibraryManagementSystem/render.yaml) and provision:
-   - A **PostgreSQL Database**
-   - A **Node.js Web Service** linked via `DATABASE_URL`
-5. Click **Apply**. Render will build, deploy, and provide your live public URL (e.g. `https://your-app.onrender.com`).
 
 
 ## Layout Note
