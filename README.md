@@ -15,21 +15,20 @@ A deployable Node.js app for a real library workflow:
 
 ## Database Storage
 
-The app now stores data in a real SQLite database file:
+The app stores data in a PostgreSQL database:
 
-- Database file: `data/library.db`
+- Environment variable: `DATABASE_URL` (e.g. `postgres://postgres:postgres@localhost:5432/library_db`) or individual `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPORT` settings.
 - Stored data:
   - librarian and super admin accounts
   - seat statuses
   - library settings
-
-This means the seat status stays saved after restart and is suitable for deployment on a VPS or hosting where the filesystem persists.
+  - activity logs
 
 ## Tech Stack
 
 - Node.js
 - Express
-- SQLite
+- PostgreSQL (`pg`)
 - JWT authentication
 - BCrypt password hashing
 
@@ -65,12 +64,16 @@ Open:
 - Librarian page: `http://localhost:3000/librarian`
 - Super admin page: `http://localhost:3000/super-admin`
 
-## Deployment Notes
+## Deploying to Render
 
-- Put the app behind HTTPS in production
-- Use a strong `JWT_SECRET`
-- Keep `data/library.db` on persistent storage
-- Back up `data/library.db` regularly because it contains the live seat state and login data
+1. Push this repository to GitHub.
+2. Sign in to [Render](https://render.com).
+3. Click **New +** -> **Blueprint**.
+4. Connect your GitHub repository. Render will automatically detect [`render.yaml`](file:///c:/Users/harsh/Desktop/LibraryManagementSystem/render.yaml) and provision:
+   - A **PostgreSQL Database**
+   - A **Node.js Web Service** linked via `DATABASE_URL`
+5. Click **Apply**. Render will build, deploy, and provide your live public URL (e.g. `https://your-app.onrender.com`).
+
 
 ## Layout Note
 

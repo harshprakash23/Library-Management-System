@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: library-seat-management
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: library-db
+          property: connectionString
+
+databases:
+  - name: library-db
+    databaseName: library_db
+    user: postgres

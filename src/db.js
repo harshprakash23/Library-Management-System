@@ -1,60 +1,74 @@
-const fs = require("fs");
-const path = require("path");
-const sqlite3 = require("sqlite3").verbose();
+const { Pool } = require("pg");
+const { newDb } = require("pg-mem");
 const bcrypt = require("bcryptjs");
 const { getSeatNumbers, buildSeatMap } = require("./layout");
 
-const DATA_DIR = path.join(__dirname, "..", "data");
-const DB_PATH = path.join(DATA_DIR, "library.db");
+let activePool = null;
 
-let db;
-
-function openDatabase() {
-  return new Promise((resolve, reject) => {
-    const database = new sqlite3.Database(DB_PATH, (error) => {
-      if (error) {
-        reject(error);
-        return;
+function getPoolConfig() {
+  return process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
+        connectionTimeoutMillis: 2000,
       }
-      resolve(database);
-    });
-  });
+    : {
+        host: process.env.PGHOST || "localhost",
+        port: Number(process.env.PGPORT) || 5432,
+        user: process.env.PGUSER || "postgres",
+        password: process.env.PGPASSWORD || "postgres",
+        database: process.env.PGDATABASE || "library_db",
+        ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
+        connectionTimeoutMillis: 2000,
+      };
 }
 
-function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function onRun(error) {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve({ id: this.lastID, changes: this.changes });
+async function initializePool() {
+  if (activePool) {
+    return activePool;
+  }
+
+  const realPool = new Pool(getPoolConfig());
+  try {
+    const client = await realPool.connect();
+    client.release();
+    console.log("Connected to PostgreSQL database server.");
+    activePool = realPool;
+    return activePool;
+  } catch (error) {
+    console.log("No live PostgreSQL server reached at localhost:5432. Falling back to embedded PostgreSQL instance.");
+    const memDb = newDb();
+    memDb.public.registerFunction({
+      name: "trim",
+      implementation: (val) => (val ? String(val).trim() : ""),
     });
-  });
+    const pgAdapter = memDb.adapters.createPg();
+    activePool = new pgAdapter.Pool();
+    return activePool;
+  }
 }
 
-function get(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (error, row) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(row);
-    });
-  });
+function convertSql(sql) {
+  let paramIndex = 1;
+  return sql.replace(/\?/g, () => `$${paramIndex++}`);
 }
 
-function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (error, rows) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(rows);
-    });
-  });
+async function run(sql, params = []) {
+  const result = await activePool.query(convertSql(sql), params);
+  return {
+    id: result.rows && result.rows.length > 0 ? result.rows[0].id : null,
+    changes: result.rowCount,
+  };
+}
+
+async function get(sql, params = []) {
+  const result = await activePool.query(convertSql(sql), params);
+  return result.rows[0] || null;
+}
+
+async function all(sql, params = []) {
+  const result = await activePool.query(convertSql(sql), params);
+  return result.rows;
 }
 
 function summarizeSeats(seats) {
@@ -67,11 +81,7 @@ function summarizeSeats(seats) {
 }
 
 async function ensureDatabase() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-
-  db = await openDatabase();
+  await initializePool();
 
   await run(`
     CREATE TABLE IF NOT EXISTS library_settings (
@@ -108,7 +118,7 @@ async function ensureDatabase() {
 
   await run(`
     CREATE TABLE IF NOT EXISTS activity_log (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       seat_number INTEGER,
       action TEXT NOT NULL,
       status TEXT,
@@ -117,10 +127,7 @@ async function ensureDatabase() {
     )
   `);
 
-  const tableInfo = await all(`PRAGMA table_info(users)`);
-  if (!tableInfo.some((column) => column.name === "username")) {
-    await run(`ALTER TABLE users ADD COLUMN username TEXT`);
-  }
+  await run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT`);
 
   await run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)`);
 
@@ -139,10 +146,7 @@ async function ensureDatabase() {
   }
 
   const userCount = await get(`SELECT COUNT(*) AS count FROM users`);
-  if (!userCount || userCount.count === 0) {
-    // NOTE: `username` is what you log in with. `email` just needs to be
-    // unique in the table — it doesn't need to be a real address and isn't
-    // shown anywhere in the login form.
+  if (!userCount || Number(userCount.count) === 0) {
     await run(
       `INSERT INTO users (id, name, username, email, password_hash, role, active, created_at)
        VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
@@ -172,7 +176,7 @@ async function ensureDatabase() {
   }
 
   const adminWithoutUsername = await all(
-    `SELECT id, name FROM users WHERE role = 'ADMIN' AND (username IS NULL OR trim(username) = '')`
+    `SELECT id, name FROM users WHERE role = 'ADMIN' AND (username IS NULL OR username = '')`
   );
   for (const user of adminWithoutUsername) {
     const baseUsername = String(user.name || "librarian")
@@ -208,7 +212,7 @@ async function ensureDatabase() {
   }
 
   const seatCount = await get(`SELECT COUNT(*) AS count FROM seats`);
-  if (!seatCount || seatCount.count === 0) {
+  if (!seatCount || Number(seatCount.count) === 0) {
     const now = new Date().toISOString();
     for (const number of getSeatNumbers()) {
       await run(
@@ -272,13 +276,6 @@ async function getUserById(id) {
   return get(`SELECT * FROM users WHERE id = ?`, [id]);
 }
 
-// Every caller of this used to assume the row always exists and read
-// `settings.name` etc directly. If that row is ever missing (a bad
-// migration, a manually-edited DB file, a fresh DB queried mid-startup),
-// that was the "Cannot read properties of null/undefined" crash you were
-// seeing surface in the UI. We throw a clear, well-labeled error instead —
-// the asyncHandler + error middleware in server.js now turns this into a
-// clean message for the client and logs the real cause on the server.
 async function getLibrarySettingsRow() {
   const settings = await get(`SELECT * FROM library_settings WHERE id = 1`);
   if (!settings) {
@@ -431,7 +428,6 @@ async function deleteAdminUser(adminId) {
 }
 
 module.exports = {
-  DB_PATH,
   ensureDatabase,
   summarizeSeats,
   addActivityLogEntry,
