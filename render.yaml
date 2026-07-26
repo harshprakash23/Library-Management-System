@@ -15,4 +15,4 @@ services:
 databases:
   - name: library-db
     databaseName: library_db
-    user: postgres
+    user: library_user
