@@ -221,7 +221,7 @@ app.patch(
     const seatNumber = Number(req.params.seatNumber);
     const { status } = req.body || {};
 
-    if (!new Set(["VACANT", "OCCUPIED"]).has(status)) {
+    if (!new Set(["VACANT", "OCCUPIED", "FLOATING"]).has(status)) {
       return res.status(400).json({ error: "Invalid seat status." });
     }
 

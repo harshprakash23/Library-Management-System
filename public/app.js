@@ -19,6 +19,10 @@ function setText(id, value) {
   }
 }
 
+function formatSeatStatus(status) {
+  return status === "FLOATING" ? "Floating" : status === "OCCUPIED" ? "Occupied" : "Vacant";
+}
+
 function getToken() {
   return localStorage.getItem(tokenStorageKey);
 }
@@ -165,7 +169,7 @@ function createCell(cell, { clickable = false, onSeatClick, highlightSeat, anima
 
   const button = document.createElement(clickable ? "button" : "div");
   const isAnimating = Number(animateSeat) === cell.seatNumber;
-  button.className = `seat ${cell.status === "VACANT" ? "vacant" : "occupied"} ${
+  button.className = `seat ${cell.status === "VACANT" ? "vacant" : cell.status === "FLOATING" ? "floating" : "occupied"} ${
     cell.orientation === "vertical" ? "vertical" : ""
   } ${clickable ? "clickable" : ""} ${isAnimating ? "seat-animating" : ""}`;
   button.textContent = cell.seatNumber;
@@ -235,7 +239,7 @@ function renderActivityLog(entries = []) {
           <div class="activity-copy">
             <strong>${seatText}</strong>
             <p>${entry.details || "Seat activity updated."}</p>
-            <span>${entry.action === "reset" ? "Reset" : entry.status === "VACANT" ? "Vacant" : "Occupied"}</span>
+            <span>${entry.action === "reset" ? "Reset" : formatSeatStatus(entry.status)}</span>
           </div>
         </button>
       `;
@@ -297,6 +301,7 @@ async function loadStudentView(highlightSeat = "") {
   setText("brandMark", payload.library?.logoText ?? "");
   setText("vacantCount", `Vacant: ${payload.seatSummary?.vacant ?? "-"}`);
   setText("occupiedCount", `Occupied: ${payload.seatSummary?.occupied ?? "-"}`);
+  setText("floatingCount", `Floating: ${payload.seatSummary?.floating ?? "-"}`);
   setLastUpdated(new Date());
   renderSeatLayout("seatLayout", payload.layout || [], { highlightSeat, animateSeat: animateSeatNumber });
 }
@@ -323,9 +328,7 @@ async function bootStudent() {
 function openSeatModal(cell) {
   selectedSeat = cell;
   setText("seatModalTitle", `Seat ${cell.seatNumber}`);
-  setText("seatModalStatus", `Current Status: ${cell.status}`);
-  document.getElementById("seatModalToggle").textContent =
-    cell.status === "VACANT" ? "Mark Occupied" : "Mark Vacant";
+  setText("seatModalStatus", `Current Status: ${formatSeatStatus(cell.status)}`);
   document.getElementById("seatModal").classList.remove("hidden");
 }
 
@@ -340,6 +343,7 @@ async function loadAdminDashboard(highlightSeat = "", animatedSeat = "") {
   setText("brandMark", payload.library?.logoText ?? "");
   setText("adminOccupiedCount", `Occupied: ${payload.seatSummary?.occupied ?? "-"}`);
   setText("adminVacantCount", `Vacant: ${payload.seatSummary?.vacant ?? "-"}`);
+  setText("adminFloatingCount", `Floating: ${payload.seatSummary?.floating ?? "-"}`);
   setText("adminUserName", `Welcome, ${payload.user?.name ?? "Librarian"}`);
   setLastUpdated(new Date());
   renderActivityLog(payload.activityLog || []);
@@ -409,12 +413,13 @@ async function bootAdmin() {
     closeModal("seatModal");
   });
 
-  document.getElementById("seatModalToggle")?.addEventListener("click", async () => {
+  document.querySelectorAll("[data-seat-status]").forEach((statusButton) => {
+    statusButton.addEventListener("click", async () => {
     if (!selectedSeat) {
       return;
     }
 
-    const nextStatus = selectedSeat.status === "VACANT" ? "OCCUPIED" : "VACANT";
+    const nextStatus = statusButton.dataset.seatStatus;
     try {
       const payload = await request(`/api/admin/seats/${selectedSeat.seatNumber}/status`, {
         method: "PATCH",
@@ -449,6 +454,7 @@ async function bootAdmin() {
     } catch (error) {
       showErrorToast(error.message);
     }
+    });
   });
 
   document.getElementById("refreshAdmin")?.addEventListener("click", async () => {

@@ -53,10 +53,16 @@
 
       <div id="adminDashboard" class="dashboard hidden">
         <section class="summary-card reveal" style="animation-delay: 0ms;">
+          <div class="legend">
+            <span><i class="legend-dot vacant"></i> Vacant</span>
+            <span><i class="legend-dot occupied"></i> Occupied</span>
+            <span><i class="legend-dot floating"></i> Floating</span>
+          </div>
           <div class="summary-meta">
             <div class="summary-pill compact" id="lastUpdatedTime">Last Updated — --:--</div>
             <div class="summary-pill" id="adminOccupiedCount">Occupied: 0</div>
             <div class="summary-pill" id="adminVacantCount">Vacant: 0</div>
+            <div class="summary-pill" id="adminFloatingCount">Floating: 0</div>
             <div class="summary-pill" id="adminUserName">Welcome</div>
             <div class="summary-pill" id="adminThemeBadge">Theme: light</div>
           </div>
@@ -80,7 +86,7 @@
           </label>
           <div class="hero-actions">
             <button class="secondary-btn" id="toggleActivityCenter" type="button">Open Activity Center</button>
-            <p class="helper-copy">Click a seat to mark it occupied or vacant.</p>
+            <p class="helper-copy">Click a seat to mark it vacant, occupied, or floating.</p>
             <span class="shortcut-chip">Press <kbd>/</kbd> to search</span>
           </div>
         </section>
@@ -107,7 +113,9 @@
         <h3 id="seatModalTitle">Seat</h3>
         <p id="seatModalStatus">Current Status:</p>
         <div class="modal-actions">
-          <button id="seatModalToggle" class="primary-btn">Toggle</button>
+          <button data-seat-status="VACANT" class="secondary-btn" type="button">Mark Vacant</button>
+          <button data-seat-status="OCCUPIED" class="primary-btn" type="button">Mark Occupied</button>
+          <button data-seat-status="FLOATING" class="floating-btn" type="button">Mark Floating</button>
           <button id="closeSeatModal" class="secondary-btn">Cancel</button>
         </div>
       </div>
@@ -169,6 +177,7 @@
         var label = document.getElementById('occupancyLabel');
         var vacantEl = document.getElementById('adminVacantCount');
         var occupiedEl = document.getElementById('adminOccupiedCount');
+        var floatingEl = document.getElementById('adminFloatingCount');
 
         function parseCount(el) {
           if (!el) return 0;
@@ -179,16 +188,18 @@
         function updateMeter() {
           var vacant = parseCount(vacantEl);
           var occupied = parseCount(occupiedEl);
-          var total = vacant + occupied;
+          var floating = parseCount(floatingEl);
+          var total = vacant + occupied + floating;
           var pct = total > 0 ? Math.round((occupied / total) * 100) : 0;
           if (fill) fill.style.width = pct + '%';
           if (label) label.textContent = total > 0 ? pct + '% occupied' : 'No seat data yet';
         }
 
-        if (vacantEl && occupiedEl && window.MutationObserver) {
+        if (vacantEl && occupiedEl && floatingEl && window.MutationObserver) {
           var obs = new MutationObserver(updateMeter);
           obs.observe(vacantEl, { childList: true, characterData: true, subtree: true });
           obs.observe(occupiedEl, { childList: true, characterData: true, subtree: true });
+          obs.observe(floatingEl, { childList: true, characterData: true, subtree: true });
         }
         updateMeter();
 

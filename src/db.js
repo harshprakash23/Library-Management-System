@@ -73,10 +73,12 @@ async function all(sql, params = []) {
 
 function summarizeSeats(seats) {
   const occupied = seats.filter((seat) => seat.status === "OCCUPIED").length;
+  const floating = seats.filter((seat) => seat.status === "FLOATING").length;
   return {
     total: seats.length,
     occupied,
-    vacant: seats.length - occupied,
+    floating,
+    vacant: seats.length - occupied - floating,
   };
 }
 

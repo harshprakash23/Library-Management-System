@@ -15,6 +15,7 @@
   --burgundy: #7a2c2c;
   --vacant: #3a8d4a;
   --occupied: #151515;
+  --floating: #b93838;
   --shadow: 0 20px 60px rgba(35, 26, 12, 0.14);
 
   --surface: rgba(255, 255, 255, 0.75);
@@ -296,6 +297,7 @@ h1 {
 .button-link,
 .primary-btn,
 .secondary-btn,
+.floating-btn,
 .text-btn {
   border: none;
   text-decoration: none;
@@ -351,6 +353,10 @@ h1 {
 
 .legend-dot.occupied {
   background: var(--occupied);
+}
+
+.legend-dot.floating {
+  background: var(--floating);
 }
 
 .summary-pill {
@@ -458,6 +464,10 @@ h1 {
 
 .seat.occupied {
   background: linear-gradient(180deg, #2d2d2d, #111);
+}
+
+.seat.floating {
+  background: linear-gradient(180deg, #d34b4b, #982f2f);
 }
 
 
@@ -723,6 +733,12 @@ h1 {
   border: 1px solid var(--border-soft);
 }
 
+.floating-btn {
+  background: linear-gradient(135deg, #b93838, #7d2424);
+  color: #fff7f7;
+  padding: 0.9rem 1rem;
+}
+
 .text-btn {
   background: transparent;
   color: var(--forest);
@@ -868,6 +884,7 @@ body[data-theme="dark"] {
   --burgundy: #e2836a;
   --vacant: #34d399;
   --occupied: #0f172a;
+  --floating: #ef4444;
   --shadow: 0 20px 60px rgba(2, 6, 23, 0.55);
 
   --surface: rgba(148, 163, 184, 0.14);
