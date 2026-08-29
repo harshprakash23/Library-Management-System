@@ -11,6 +11,32 @@ let pendingUndoTimer = null;
 let animateSeatNumber = null;
 let lastActivityEntries = [];
 let selectedActivityIndex = 0;
+const studentLayoutCacheKey = "library-student-layout-cache";
+
+function isCompleteSeatPayload(payload) {
+  const seats = (payload?.layout || []).flat().filter((cell) => cell.type === "seat");
+  return Number(payload?.seatSummary?.total) === 61 && seats.length === 61;
+}
+
+function saveStudentLayout(payload) {
+  if (!isCompleteSeatPayload(payload)) {
+    return;
+  }
+
+  localStorage.setItem(
+    studentLayoutCacheKey,
+    JSON.stringify({ payload, savedAt: new Date().toISOString() })
+  );
+}
+
+function getSavedStudentLayout() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(studentLayoutCacheKey) || "null");
+    return isCompleteSeatPayload(cached?.payload) ? cached : null;
+  } catch {
+    return null;
+  }
+}
 
 function setText(id, value) {
   const element = document.getElementById(id);
@@ -133,6 +159,31 @@ function friendlyErrorMessage(message, fallback) {
     return fallback;
   }
   return message || fallback;
+}
+
+async function downloadSeatReport() {
+  const token = getToken();
+  const response = await fetch("/api/admin/seat-report.csv", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || "Could not download the daily seat report.");
+  }
+
+  const file = await response.blob();
+  const objectUrl = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  const filename = response.headers
+    .get("Content-Disposition")
+    ?.match(/filename="?([^";]+)"?/i)?.[1];
+  link.href = objectUrl;
+  link.download = filename || "seat-report.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
 }
 
 async function request(url, options = {}) {
@@ -296,7 +347,23 @@ async function hydrateBrand() {
 }
 
 async function loadStudentView(highlightSeat = "") {
-  const payload = await request("/api/public/layout", { method: "GET", headers: {} });
+  let payload;
+  try {
+    payload = await request("/api/public/layout", { method: "GET", headers: {} });
+    if (!isCompleteSeatPayload(payload)) {
+      throw new Error("The seat data received from the server is incomplete.");
+    }
+    saveStudentLayout(payload);
+  } catch (error) {
+    const cached = getSavedStudentLayout();
+    if (!cached) {
+      throw error;
+    }
+    payload = cached.payload;
+    showErrorToast("Live seat updates are temporarily unavailable. Showing the last saved seat map.", {
+      duration: 5000,
+    });
+  }
   setText("libraryName", payload.library?.name ?? "Library");
   setText("brandMark", payload.library?.logoText ?? "");
   setText("vacantCount", `Vacant: ${payload.seatSummary?.vacant ?? "-"}`);
@@ -308,7 +375,13 @@ async function loadStudentView(highlightSeat = "") {
 
 async function bootStudent() {
   applyTheme(getStoredTheme());
-  await loadStudentView();
+  try {
+    await loadStudentView();
+  } catch (error) {
+    showErrorToast("Seat availability is temporarily unavailable. Please refresh in a moment.", {
+      duration: 6000,
+    });
+  }
   attachSearch("seatSearch", (seat) => loadStudentView(seat));
   const themeButton = document.getElementById("themeToggle");
   themeButton?.addEventListener("click", () => {
@@ -461,6 +534,15 @@ async function bootAdmin() {
     const currentSearch = document.getElementById("adminSeatSearch")?.value || "";
     try {
       await loadAdminDashboard(currentSearch);
+    } catch (error) {
+      showErrorToast(error.message);
+    }
+  });
+
+  document.getElementById("downloadSeatReport")?.addEventListener("click", async () => {
+    try {
+      await downloadSeatReport();
+      showToast("Daily seat report downloaded.");
     } catch (error) {
       showErrorToast(error.message);
     }

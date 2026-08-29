@@ -5,12 +5,16 @@ const { getSeatNumbers, buildSeatMap } = require("./layout");
 
 let activePool = null;
 
+function wait(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 function getPoolConfig() {
   return process.env.DATABASE_URL
     ? {
         connectionString: process.env.DATABASE_URL,
         ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
-        connectionTimeoutMillis: 2000,
+        connectionTimeoutMillis: 10000,
       }
     : {
         host: process.env.PGHOST || "localhost",
@@ -19,7 +23,7 @@ function getPoolConfig() {
         password: process.env.PGPASSWORD || "postgres",
         database: process.env.PGDATABASE || "library_db",
         ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
-        connectionTimeoutMillis: 2000,
+        connectionTimeoutMillis: 10000,
       };
 }
 
@@ -29,14 +33,52 @@ async function initializePool() {
   }
 
   const realPool = new Pool(getPoolConfig());
+  const attempts = process.env.DATABASE_URL ? 3 : 1;
+  let lastError;
   try {
-    const client = await realPool.connect();
-    client.release();
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const client = await realPool.connect();
+        client.release();
+        lastError = null;
+        break;
+      } catch (error) {
+        lastError = error;
+        if (attempt < attempts) {
+          console.warn(`PostgreSQL connection attempt ${attempt} of ${attempts} failed; retrying.`);
+          await wait(attempt * 1000);
+        }
+      }
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
+
     console.log("Connected to PostgreSQL database server.");
     activePool = realPool;
     return activePool;
   } catch (error) {
-    console.log("No live PostgreSQL server reached at localhost:5432. Falling back to embedded PostgreSQL instance.");
+    // An in-memory database is useful for a quick local demo, but it is
+    // destroyed whenever Node restarts. Silently using it in production made
+    // every seat appear vacant after a restart or a failed database connection.
+    if (process.env.ALLOW_IN_MEMORY_DB !== "true") {
+      await realPool.end().catch(() => {});
+      const configuredDatabase = process.env.DATABASE_URL
+        ? "DATABASE_URL"
+        : "PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE";
+      throw new Error(
+        `Could not connect to PostgreSQL using ${configuredDatabase}. ` +
+          "Seat data was not loaded, so the server will not start with an empty in-memory database. " +
+          "Fix the database connection, or set ALLOW_IN_MEMORY_DB=true only for a disposable local demo.",
+        { cause: error }
+      );
+    }
+
+    console.warn(
+      "PostgreSQL is unavailable; using a disposable in-memory database because ALLOW_IN_MEMORY_DB=true. " +
+        "All seat statuses will reset when this server restarts."
+    );
     const memDb = newDb();
     memDb.public.registerFunction({
       name: "trim",
@@ -82,8 +124,25 @@ function summarizeSeats(seats) {
   };
 }
 
+function assertSeatInventory(seats) {
+  const expectedNumbers = getSeatNumbers();
+  const actualNumbers = seats.map((seat) => Number(seat.number));
+  const hasExpectedSeats =
+    actualNumbers.length === expectedNumbers.length &&
+    expectedNumbers.every((number) => actualNumbers.includes(number));
+
+  if (!hasExpectedSeats) {
+    throw new Error(
+      `Seat inventory is incomplete (expected ${expectedNumbers.length} seats, found ${actualNumbers.length}). ` +
+        "Refusing to show missing seats as vacant. Restore the PostgreSQL database backup or fix the database connection."
+    );
+  }
+}
+
 async function ensureDatabase() {
   await initializePool();
+
+  let createdInitialSettings = false;
 
   await run(`
     CREATE TABLE IF NOT EXISTS library_settings (
@@ -135,6 +194,7 @@ async function ensureDatabase() {
 
   const settings = await get(`SELECT id FROM library_settings WHERE id = 1`);
   if (!settings) {
+    createdInitialSettings = true;
     await run(
       `INSERT INTO library_settings (id, name, logo_text, reset_key_hash, updated_at)
        VALUES (1, ?, ?, ?, ?)`,
@@ -215,6 +275,12 @@ async function ensureDatabase() {
 
   const seatCount = await get(`SELECT COUNT(*) AS count FROM seats`);
   if (!seatCount || Number(seatCount.count) === 0) {
+    if (!createdInitialSettings) {
+      throw new Error(
+        "The existing database has no seat records. Refusing to recreate them as vacant because that would erase seat availability. Restore the seat data before starting the service."
+      );
+    }
+
     const now = new Date().toISOString();
     for (const number of getSeatNumbers()) {
       await run(
@@ -223,6 +289,8 @@ async function ensureDatabase() {
       );
     }
   }
+
+  assertSeatInventory(await getSeatRows());
 }
 
 async function addActivityLogEntry({ seatNumber, action, status, details }) {
@@ -296,7 +364,15 @@ async function getLibrary() {
 }
 
 async function getSeatRows() {
-  return all(`SELECT id, number, status, updated_at FROM seats ORDER BY number ASC`);
+  const seats = await all(`SELECT id, number, status, updated_at FROM seats ORDER BY number ASC`);
+  assertSeatInventory(seats);
+  return seats;
+}
+
+async function getDatabaseHealth() {
+  await get(`SELECT 1 AS healthy`);
+  await getSeatRows();
+  return true;
 }
 
 async function getPublicLayoutPayload() {
@@ -440,6 +516,7 @@ module.exports = {
   getUserById,
   getLibrary,
   getSeatRows,
+  getDatabaseHealth,
   getPublicLayoutPayload,
   updateUserPassword,
   updateSeatStatus,

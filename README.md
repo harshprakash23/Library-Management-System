@@ -13,6 +13,10 @@ A deployable Node.js app for a real library workflow:
 - `Librarian`: username login, search seats, mark seats vacant/occupied/floating, view activity, and reset all seats using the reset key
 - `Super Admin`: hidden management panel for librarian accounts, library name/logo, and librarian reset key
 
+Librarians can also select **Download Daily Report** to save an Excel-compatible
+CSV snapshot of all seats, their current status, and the report summary. Keep
+these reports as a simple daily record; they do not replace a PostgreSQL backup.
+
 ## Database Storage
 
 The app stores data in a PostgreSQL database:
@@ -23,6 +27,18 @@ The app stores data in a PostgreSQL database:
   - seat statuses (`VACANT`, `OCCUPIED`, or `FLOATING`)
   - library settings
   - activity logs
+
+The server will not start if it cannot reach PostgreSQL. This protects seat
+statuses from being replaced with a blank, in-memory database after a restart.
+For a disposable local UI demo without PostgreSQL, explicitly set
+`ALLOW_IN_MEMORY_DB=true`; all data, including seat statuses, is then lost when
+the server restarts.
+
+On Render, keep the `library-db` PostgreSQL database attached to the web
+service through `DATABASE_URL`. Do not set `ALLOW_IN_MEMORY_DB` in Render. A
+free web service can sleep or restart; PostgreSQL persists the seat statuses
+through those events. The `/healthz` check only reports healthy after it can
+read all 61 persistent seat records.
 
 ## Tech Stack
 
@@ -53,6 +69,13 @@ The app stores data in a PostgreSQL database:
 
 ```bash
 npm install
+npm start
+```
+
+If you do not have PostgreSQL running locally and only want to preview the UI:
+
+```bash
+$env:ALLOW_IN_MEMORY_DB = "true"
 npm start
 ```
 

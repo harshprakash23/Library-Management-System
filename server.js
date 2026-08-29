@@ -10,6 +10,7 @@ const {
   getUserById,
   getLibrary,
   getSeatRows,
+  getDatabaseHealth,
   getActivityLog,
   getPublicLayoutPayload,
   summarizeSeats,
@@ -116,6 +117,28 @@ function validatePassword(password) {
   return /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$/.test(String(password || ""));
 }
 
+function csvValue(value) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function buildSeatReportCsv(library, seats) {
+  const summary = summarizeSeats(seats);
+  const createdAt = new Date().toISOString();
+  const lines = [
+    ["Library", library.name],
+    ["Report generated (UTC)", createdAt],
+    ["Total seats", summary.total],
+    ["Vacant seats", summary.vacant],
+    ["Occupied seats", summary.occupied],
+    ["Floating seats", summary.floating],
+    [],
+    ["Seat number", "Status", "Last updated (UTC)"],
+    ...seats.map((seat) => [seat.number, seat.status, seat.updated_at]),
+  ];
+
+  return `\uFEFF${lines.map((line) => line.map(csvValue).join(",")).join("\r\n")}\r\n`;
+}
+
 app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -135,6 +158,17 @@ app.get("/admin", (_req, res) => {
 app.get("/super-admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "super-admin.html"));
 });
+
+// Render uses this endpoint to send traffic only to an instance that can read
+// the persistent seat database. It deliberately checks the seat inventory too,
+// so a broken or empty database cannot look healthy.
+app.get(
+  "/healthz",
+  asyncHandler(async (_req, res) => {
+    await getDatabaseHealth();
+    res.status(200).json({ status: "ok" });
+  })
+);
 
 // Both ADMIN (librarian) and SUPER_ADMIN log in with a username, not an
 // email — the `email` column only exists to satisfy the UNIQUE constraint
@@ -211,6 +245,23 @@ app.get(
       activityLog,
       user: sanitizeUser(req.user),
     });
+  })
+);
+
+// A librarian can keep a dated local copy of the current seat availability.
+// This is intentionally a report export, not a database backup: it is easy to
+// open in Excel and also provides a human-readable daily record.
+app.get(
+  "/api/admin/seat-report.csv",
+  auth(["ADMIN", "SUPER_ADMIN"]),
+  asyncHandler(async (_req, res) => {
+    const [library, seats] = await Promise.all([getLibrary(), getSeatRows()]);
+    const date = new Date().toISOString().slice(0, 10);
+    res
+      .status(200)
+      .type("text/csv")
+      .set("Content-Disposition", `attachment; filename="seat-report-${date}.csv"`)
+      .send(buildSeatReportCsv(library, seats));
   })
 );
 
