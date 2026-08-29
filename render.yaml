@@ -2,7 +2,7 @@ services:
   - type: web
     name: library-seat-management
     env: node
-    plan: free
+    plan: basic-256mb
     buildCommand: npm install
     startCommand: npm start
     envVars:
